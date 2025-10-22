@@ -46,6 +46,9 @@ FOLLOWUPBOSS_API_KEY=your_api_key_here
 # Optional (for AI summaries)
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
 
+# Optional (for Motion integration)
+MOTION_WEBHOOK_URL=your_motion_webhook_url_here
+
 # Optional limits (for testing)
 MAX_PEOPLE=100
 MAX_EVENTS=500
@@ -74,6 +77,23 @@ For more information, see the [FollowUpBoss API Documentation](https://docs.foll
 
 If you don't provide an Anthropic API key, the tool will still fetch and aggregate data, but will skip the AI-powered summarization.
 
+### Motion Webhook (Optional)
+
+Automatically send your FollowUpBoss summary to Motion as a task:
+
+1. Go to [Motion](https://app.usemotion.com/)
+2. Set up a webhook integration (or use Zapier/Make.com to create a webhook that creates Motion tasks)
+3. Copy your webhook URL
+4. Add it to your `.env` file as `MOTION_WEBHOOK_URL`
+
+**What gets sent to Motion:**
+- Total people and interactions
+- Event type breakdown
+- Top 10 most engaged contacts
+- All data is formatted as JSON (see `WEBHOOK_PAYLOAD_SPEC.md` for details)
+
+If you don't provide a webhook URL, the tool will still work and save all data locally.
+
 ## Usage
 
 ### Basic Usage
@@ -88,8 +108,9 @@ This will:
 1. Fetch all conversations from FollowUpBoss
 2. Aggregate data by person
 3. Generate summary statistics
-4. Create AI-powered insights (if API key provided)
-5. Save all outputs to the `output/` directory
+4. Send data to Motion webhook (if configured)
+5. Create AI-powered insights (if Anthropic API key provided)
+6. Save all outputs to the `output/` directory
 
 ### Output Files
 

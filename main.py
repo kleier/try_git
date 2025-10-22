@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from fub_client import FollowUpBossClient
 from data_aggregator import ConversationAggregator
 from summarizer import ConversationSummarizer
+from motion_webhook import MotionWebhookSender
 
 
 def load_config():
@@ -32,9 +33,14 @@ def load_config():
         print("Warning: ANTHROPIC_API_KEY not found. AI summarization will be skipped.")
         anthropic_api_key = None
 
+    motion_webhook_url = os.getenv('MOTION_WEBHOOK_URL')
+    if not motion_webhook_url:
+        print("Info: MOTION_WEBHOOK_URL not found. Motion integration will be skipped.")
+
     config = {
         'fub_api_key': fub_api_key,
         'anthropic_api_key': anthropic_api_key,
+        'motion_webhook_url': motion_webhook_url,
         'max_people': int(os.getenv('MAX_PEOPLE', 100)),
         'max_events': int(os.getenv('MAX_EVENTS', 500)),
         'max_text_messages': int(os.getenv('MAX_TEXT_MESSAGES', 500)),
@@ -222,6 +228,30 @@ def save_ai_summaries(ai_summaries, output_dir="output"):
     print("\n" + ai_summaries['business_insights'])
 
 
+def send_to_motion_webhook(config, summary_stats):
+    """Send summary data to Motion webhook if configured"""
+    if not config.get('motion_webhook_url'):
+        print("\nSkipping Motion webhook (no URL configured)")
+        return
+
+    print("\n" + "=" * 60)
+    print("SENDING DATA TO MOTION")
+    print("=" * 60)
+
+    webhook_sender = MotionWebhookSender(config['motion_webhook_url'])
+
+    # Send the summary
+    success = webhook_sender.send_summary(summary_stats)
+
+    if success:
+        # Also print formatted text for reference
+        formatted_text = webhook_sender.format_summary_text(summary_stats)
+        print("\n📋 Preview of data sent:")
+        print(formatted_text)
+    else:
+        print("\n⚠️  Motion webhook failed, but data is still saved locally")
+
+
 def main():
     """Main execution function"""
     print("\nFollowUpBoss Conversation Summarizer")
@@ -244,6 +274,9 @@ def main():
     # Save data
     save_data(aggregated_data, summary_stats)
 
+    # Send to Motion webhook
+    send_to_motion_webhook(config, summary_stats)
+
     # Generate and save AI summaries
     ai_summaries = generate_ai_summaries(config, aggregated_data, summary_stats)
     if ai_summaries:
@@ -253,6 +286,8 @@ def main():
     print("COMPLETE!")
     print("=" * 60)
     print("\nCheck the 'output' directory for all generated files.")
+    if config.get('motion_webhook_url'):
+        print("Data has also been sent to Motion!")
 
 
 if __name__ == "__main__":
