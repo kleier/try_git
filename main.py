@@ -60,8 +60,14 @@ def fetch_data(config):
     print(f"   Retrieved {len(events)} events")
 
     print("\n3. Fetching text messages...")
-    text_messages = client.get_all_text_messages(max_records=config['max_text_messages'])
-    print(f"   Retrieved {len(text_messages)} text messages")
+    try:
+        text_messages = client.get_all_text_messages(max_records=config['max_text_messages'])
+        print(f"   Retrieved {len(text_messages)} text messages")
+    except Exception as e:
+        print(f"   Warning: Could not fetch text messages (this is optional)")
+        print(f"   Reason: {str(e)}")
+        print(f"   Continuing with people and events data only...")
+        text_messages = []
 
     return people, events, text_messages
 
