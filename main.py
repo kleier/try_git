@@ -96,7 +96,7 @@ def filter_by_last_24_hours(items, date_field='created'):
 def fetch_data(config):
     """Fetch data from FollowUpBoss API"""
     print("=" * 60)
-    print("FETCHING DATA FROM FOLLOWUPBOSS (LAST 24 HOURS)")
+    print("FETCHING DATA FROM FOLLOWUPBOSS")
     print("=" * 60)
 
     client = FollowUpBossClient(config['fub_api_key'])
@@ -105,18 +105,14 @@ def fetch_data(config):
     people = client.get_all_people(max_records=config['max_people'])
     print(f"   Retrieved {len(people)} people")
 
-    print("\n2. Fetching events (last 24 hours)...")
-    all_events = client.get_all_events(max_records=config['max_events'])
-    events = filter_by_last_24_hours(all_events)
-    print(f"   Retrieved {len(all_events)} total events")
-    print(f"   Filtered to {len(events)} events from last 24 hours")
+    print("\n2. Fetching events...")
+    events = client.get_all_events(max_records=config['max_events'])
+    print(f"   Retrieved {len(events)} events")
 
-    print("\n3. Fetching text messages (last 24 hours)...")
+    print("\n3. Fetching text messages...")
     try:
-        all_text_messages = client.get_all_text_messages(max_records=config['max_text_messages'])
-        text_messages = filter_by_last_24_hours(all_text_messages)
-        print(f"   Retrieved {len(all_text_messages)} total text messages")
-        print(f"   Filtered to {len(text_messages)} text messages from last 24 hours")
+        text_messages = client.get_all_text_messages(max_records=config['max_text_messages'])
+        print(f"   Retrieved {len(text_messages)} text messages")
     except Exception as e:
         print(f"   Warning: Could not fetch text messages (this is optional)")
         print(f"   Reason: {str(e)}")
@@ -173,7 +169,7 @@ def save_data(aggregated_data, summary_stats, output_dir="output"):
 def print_summary_stats(summary_stats):
     """Print summary statistics to console"""
     print("\n" + "=" * 60)
-    print("SUMMARY STATISTICS (LAST 24 HOURS)")
+    print("SUMMARY STATISTICS")
     print("=" * 60)
 
     print(f"\nTotal People: {summary_stats['total_people']}")
@@ -339,7 +335,7 @@ def send_to_motion_webhook(config, summary_stats, aggregated_data, raw_events, r
 
 def main():
     """Main execution function"""
-    print("\nFollowUpBoss Conversation Summarizer - Last 24 Hours")
+    print("\nFollowUpBoss Conversation Summarizer")
     print("=" * 60)
 
     # Load configuration
