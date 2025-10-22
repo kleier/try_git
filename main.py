@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+"""
+FollowUpBoss Conversation Summarizer
+Main script to fetch, aggregate, and summarize conversations
+"""
+
+import os
+import sys
+import json
+from datetime import datetime
+from pathlib import Path
+from dotenv import load_dotenv
+
+from fub_client import FollowUpBossClient
+from data_aggregator import ConversationAggregator
+from summarizer import ConversationSummarizer
+
+
+def load_config():
+    """Load configuration from environment variables"""
+    load_dotenv()
+
+    fub_api_key = os.getenv('FOLLOWUPBOSS_API_KEY')
+    anthropic_api_key = os.getenv('ANTHROPIC_API_KEY')
+
+    if not fub_api_key:
+        print("Error: FOLLOWUPBOSS_API_KEY not found in environment variables")
+        print("Please copy .env.example to .env and add your API key")
+        sys.exit(1)
+
+    if not anthropic_api_key:
+        print("Warning: ANTHROPIC_API_KEY not found. AI summarization will be skipped.")
+        anthropic_api_key = None
+
+    config = {
+        'fub_api_key': fub_api_key,
+        'anthropic_api_key': anthropic_api_key,
+        'max_people': int(os.getenv('MAX_PEOPLE', 100)),
+        'max_events': int(os.getenv('MAX_EVENTS', 500)),
+        'max_text_messages': int(os.getenv('MAX_TEXT_MESSAGES', 500)),
+    }
+
+    return config
+
+
+def fetch_data(config):
+    """Fetch data from FollowUpBoss API"""
+    print("=" * 60)
+    print("FETCHING DATA FROM FOLLOWUPBOSS")
+    print("=" * 60)
+
+    client = FollowUpBossClient(config['fub_api_key'])
+
+    print("\n1. Fetching people...")
+    people = client.get_all_people(max_records=config['max_people'])
+    print(f"   Retrieved {len(people)} people")
+
+    print("\n2. Fetching events...")
+    events = client.get_all_events(max_records=config['max_events'])
+    print(f"   Retrieved {len(events)} events")
+
+    print("\n3. Fetching text messages...")
+    text_messages = client.get_all_text_messages(max_records=config['max_text_messages'])
+    print(f"   Retrieved {len(text_messages)} text messages")
+
+    return people, events, text_messages
+
+
+def aggregate_data(people, events, text_messages):
+    """Aggregate and analyze data"""
+    print("\n" + "=" * 60)
+    print("AGGREGATING DATA")
+    print("=" * 60)
+
+    aggregator = ConversationAggregator(people, events, text_messages)
+
+    print("\nAggregating conversations by person...")
+    aggregated_data = aggregator.aggregate_by_person()
+    print(f"Found {len(aggregated_data)} people with interactions")
+
+    print("\nCalculating summary statistics...")
+    summary_stats = aggregator.get_summary_statistics()
+
+    return aggregated_data, summary_stats, aggregator
+
+
+def save_data(aggregated_data, summary_stats, output_dir="output"):
+    """Save aggregated data to files"""
+    print("\n" + "=" * 60)
+    print("SAVING DATA")
+    print("=" * 60)
+
+    # Create output directory
+    Path(output_dir).mkdir(exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Save summary statistics
+    stats_file = f"{output_dir}/summary_stats_{timestamp}.json"
+    with open(stats_file, 'w') as f:
+        json.dump(summary_stats, f, indent=2)
+    print(f"\nSaved summary statistics to: {stats_file}")
+
+    # Save aggregated data
+    data_file = f"{output_dir}/aggregated_data_{timestamp}.json"
+    with open(data_file, 'w') as f:
+        json.dump(aggregated_data, f, indent=2)
+    print(f"Saved aggregated data to: {data_file}")
+
+    return stats_file, data_file
+
+
+def print_summary_stats(summary_stats):
+    """Print summary statistics to console"""
+    print("\n" + "=" * 60)
+    print("SUMMARY STATISTICS")
+    print("=" * 60)
+
+    print(f"\nTotal People: {summary_stats['total_people']}")
+    print(f"People with Interactions: {summary_stats['people_with_interactions']}")
+    print(f"Total Events: {summary_stats['total_events']}")
+    print(f"Total Text Messages: {summary_stats['total_text_messages']}")
+    print(f"Total Interactions: {summary_stats['total_interactions']}")
+
+    if summary_stats.get('event_type_breakdown'):
+        print("\nEvent Type Breakdown:")
+        for event_type, count in sorted(
+            summary_stats['event_type_breakdown'].items(),
+            key=lambda x: x[1],
+            reverse=True
+        ):
+            print(f"  {event_type}: {count}")
+
+    if summary_stats.get('top_engaged_people'):
+        print("\nTop 10 Most Engaged People:")
+        for i, person in enumerate(summary_stats['top_engaged_people'], 1):
+            print(f"  {i}. {person['name']} ({person.get('email', 'no email')})")
+            print(f"     Interactions: {person['total_interactions']}")
+            print(f"     Last Activity: {person['last_activity']}")
+
+
+def generate_ai_summaries(config, aggregated_data, summary_stats):
+    """Generate AI summaries if API key is available"""
+    if not config['anthropic_api_key']:
+        print("\nSkipping AI summarization (no API key provided)")
+        return None
+
+    print("\n" + "=" * 60)
+    print("GENERATING AI INSIGHTS")
+    print("=" * 60)
+
+    summarizer = ConversationSummarizer(config['anthropic_api_key'])
+
+    print("\n1. Generating business insights...")
+    business_insights = summarizer.generate_business_insights(
+        summary_stats,
+        aggregated_data,
+        max_conversations=50
+    )
+
+    print("\n2. Generating individual conversation summaries...")
+    individual_summaries = summarizer.generate_individual_summaries(
+        aggregated_data,
+        max_people=20
+    )
+
+    return {
+        'business_insights': business_insights,
+        'individual_summaries': individual_summaries
+    }
+
+
+def save_ai_summaries(ai_summaries, output_dir="output"):
+    """Save AI summaries to files"""
+    if not ai_summaries:
+        return
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+    # Save business insights
+    insights_file = f"{output_dir}/business_insights_{timestamp}.txt"
+    with open(insights_file, 'w') as f:
+        f.write("BUSINESS INSIGHTS\n")
+        f.write("=" * 60 + "\n\n")
+        f.write(ai_summaries['business_insights'])
+    print(f"\nSaved business insights to: {insights_file}")
+
+    # Save individual summaries
+    summaries_file = f"{output_dir}/individual_summaries_{timestamp}.json"
+    with open(summaries_file, 'w') as f:
+        json.dump(ai_summaries['individual_summaries'], f, indent=2)
+    print(f"Saved individual summaries to: {summaries_file}")
+
+    # Also create a readable text version
+    summaries_txt = f"{output_dir}/individual_summaries_{timestamp}.txt"
+    with open(summaries_txt, 'w') as f:
+        f.write("INDIVIDUAL CONVERSATION SUMMARIES\n")
+        f.write("=" * 60 + "\n\n")
+
+        for summary in ai_summaries['individual_summaries']:
+            f.write(f"\n{summary['name']}\n")
+            f.write("-" * 60 + "\n")
+            f.write(f"Email: {summary.get('email', 'N/A')}\n")
+            f.write(f"Phone: {summary.get('phone', 'N/A')}\n")
+            f.write(f"Total Interactions: {summary['total_interactions']}\n")
+            f.write(f"Last Activity: {summary['last_activity']}\n")
+            f.write(f"\nSummary:\n{summary['summary']}\n")
+            f.write("\n" + "=" * 60 + "\n")
+
+    print(f"Saved readable summaries to: {summaries_txt}")
+
+    # Print business insights to console
+    print("\n" + "=" * 60)
+    print("BUSINESS INSIGHTS")
+    print("=" * 60)
+    print("\n" + ai_summaries['business_insights'])
+
+
+def main():
+    """Main execution function"""
+    print("\nFollowUpBoss Conversation Summarizer")
+    print("=" * 60)
+
+    # Load configuration
+    config = load_config()
+
+    # Fetch data from API
+    people, events, text_messages = fetch_data(config)
+
+    # Aggregate data
+    aggregated_data, summary_stats, aggregator = aggregate_data(
+        people, events, text_messages
+    )
+
+    # Print summary statistics
+    print_summary_stats(summary_stats)
+
+    # Save data
+    save_data(aggregated_data, summary_stats)
+
+    # Generate and save AI summaries
+    ai_summaries = generate_ai_summaries(config, aggregated_data, summary_stats)
+    if ai_summaries:
+        save_ai_summaries(ai_summaries)
+
+    print("\n" + "=" * 60)
+    print("COMPLETE!")
+    print("=" * 60)
+    print("\nCheck the 'output' directory for all generated files.")
+
+
+if __name__ == "__main__":
+    main()
