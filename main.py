@@ -161,25 +161,49 @@ def generate_ai_summaries(config, aggregated_data, summary_stats):
     print("GENERATING AI INSIGHTS")
     print("=" * 60)
 
-    summarizer = ConversationSummarizer(config['anthropic_api_key'])
+    try:
+        summarizer = ConversationSummarizer(config['anthropic_api_key'])
 
-    print("\n1. Generating business insights...")
-    business_insights = summarizer.generate_business_insights(
-        summary_stats,
-        aggregated_data,
-        max_conversations=50
-    )
+        print("\n1. Generating business insights...")
+        business_insights = summarizer.generate_business_insights(
+            summary_stats,
+            aggregated_data,
+            max_conversations=50
+        )
 
-    print("\n2. Generating individual conversation summaries...")
-    individual_summaries = summarizer.generate_individual_summaries(
-        aggregated_data,
-        max_people=20
-    )
+        # Check if the result is an error message
+        if business_insights.startswith("Error generating"):
+            print(f"\n⚠️  {business_insights}")
+            print("   Skipping AI summarization. Your data is still saved locally!")
+            return None
 
-    return {
-        'business_insights': business_insights,
-        'individual_summaries': individual_summaries
-    }
+        print("\n2. Generating individual conversation summaries...")
+        individual_summaries = summarizer.generate_individual_summaries(
+            aggregated_data,
+            max_people=20
+        )
+
+        return {
+            'business_insights': business_insights,
+            'individual_summaries': individual_summaries
+        }
+
+    except Exception as e:
+        error_msg = str(e)
+        print(f"\n⚠️  Could not generate AI summaries")
+
+        # Check for common errors
+        if "credit balance" in error_msg.lower():
+            print("   Reason: Anthropic API has insufficient credits")
+            print("   Solution: Add credits at https://console.anthropic.com or remove ANTHROPIC_API_KEY from .env")
+        elif "api_key" in error_msg.lower():
+            print("   Reason: Invalid Anthropic API key")
+            print("   Solution: Check your API key at https://console.anthropic.com")
+        else:
+            print(f"   Reason: {error_msg}")
+
+        print("   Your FollowUpBoss data is still saved locally!")
+        return None
 
 
 def save_ai_summaries(ai_summaries, output_dir="output"):
