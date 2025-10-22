@@ -93,19 +93,21 @@ class MotionWebhookSender:
 
         return conversations
 
-    def send_summary(self, summary_stats: Dict, aggregated_data: Optional[list] = None) -> bool:
+    def send_summary(self, summary_stats: Dict, aggregated_data: Optional[list] = None, raw_events: Optional[list] = None, raw_messages: Optional[list] = None) -> bool:
         """
-        Send summary statistics and detailed conversations to Motion webhook
+        Send summary statistics, detailed conversations, and raw data to Motion webhook
 
         Args:
             summary_stats: Summary statistics dictionary
             aggregated_data: Optional list of detailed conversation data
+            raw_events: Optional list of raw events from FollowUpBoss API
+            raw_messages: Optional list of raw text messages from FollowUpBoss API
 
         Returns:
             True if successful, False otherwise
         """
         try:
-            # Build the payload according to WEBHOOK_PAYLOAD_SPEC.md
+            # Build the payload with ALL data
             payload = {
                 "summary": {
                     "total_people": summary_stats.get('total_people', 0),
@@ -124,7 +126,15 @@ class MotionWebhookSender:
 
             # Add detailed conversations if provided
             if aggregated_data:
-                payload["conversations"] = self.format_conversations(aggregated_data, max_people=20)
+                payload["conversations"] = self.format_conversations(aggregated_data, max_people=50)
+
+            # Add ALL raw data from FollowUpBoss API
+            payload["raw_data"] = {
+                "events": raw_events if raw_events else [],
+                "text_messages": raw_messages if raw_messages else [],
+                "total_raw_events": len(raw_events) if raw_events else 0,
+                "total_raw_messages": len(raw_messages) if raw_messages else 0
+            }
 
             # Send POST request to webhook
             response = requests.post(
