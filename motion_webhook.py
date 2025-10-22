@@ -20,12 +20,86 @@ class MotionWebhookSender:
         """
         self.webhook_url = webhook_url
 
-    def send_summary(self, summary_stats: Dict) -> bool:
+    def format_conversations(self, aggregated_data: list, max_people: int = 20) -> list:
         """
-        Send summary statistics to Motion webhook
+        Format detailed conversation data for webhook
+
+        Args:
+            aggregated_data: List of person data with events and messages
+            max_people: Maximum number of people to include
+
+        Returns:
+            List of formatted conversation objects
+        """
+        conversations = []
+
+        for person_data in aggregated_data[:max_people]:
+            person = person_data['person']
+            events = person_data['events']
+            text_messages = person_data['text_messages']
+
+            # Build conversation details
+            conversation = {
+                "contact": {
+                    "name": person.get('name', 'Unknown'),
+                    "email": person.get('emails', [{}])[0].get('value') if person.get('emails') else None,
+                    "phone": person.get('phones', [{}])[0].get('value') if person.get('phones') else None,
+                },
+                "metrics": {
+                    "total_interactions": person_data['metrics']['total_interactions'],
+                    "total_events": len(events),
+                    "total_messages": len(text_messages),
+                    "last_activity": person_data['metrics']['last_activity']
+                },
+                "events": [],
+                "text_messages": [],
+                "emails": []
+            }
+
+            # Add events (calls, notes, meetings, etc.)
+            for event in events[:30]:  # Limit to 30 most recent
+                event_data = {
+                    "type": event.get('type', 'Unknown'),
+                    "created": event.get('created'),
+                    "message": event.get('message', ''),
+                    "source": event.get('source', ''),
+                    "subject": event.get('subject', '')
+                }
+
+                # Separate emails from other events
+                if event.get('type') == 'Email':
+                    conversation['emails'].append({
+                        "subject": event.get('subject', 'No subject'),
+                        "message": event.get('message', ''),
+                        "created": event.get('created'),
+                        "direction": event.get('direction', 'unknown')
+                    })
+                else:
+                    conversation['events'].append(event_data)
+
+            # Add text messages
+            for msg in text_messages[:30]:  # Limit to 30 most recent
+                conversation['text_messages'].append({
+                    "body": msg.get('body', ''),
+                    "created": msg.get('created'),
+                    "direction": msg.get('direction', 'unknown'),
+                    "from": msg.get('from', ''),
+                    "to": msg.get('to', '')
+                })
+
+            # Only include if there's activity
+            if conversation['events'] or conversation['text_messages'] or conversation['emails']:
+                conversations.append(conversation)
+
+        return conversations
+
+    def send_summary(self, summary_stats: Dict, aggregated_data: Optional[list] = None) -> bool:
+        """
+        Send summary statistics and detailed conversations to Motion webhook
 
         Args:
             summary_stats: Summary statistics dictionary
+            aggregated_data: Optional list of detailed conversation data
 
         Returns:
             True if successful, False otherwise
@@ -47,6 +121,10 @@ class MotionWebhookSender:
                 "report_type": "conversation_summary",
                 "time_period": "last_24_hours"
             }
+
+            # Add detailed conversations if provided
+            if aggregated_data:
+                payload["conversations"] = self.format_conversations(aggregated_data, max_people=20)
 
             # Send POST request to webhook
             response = requests.post(

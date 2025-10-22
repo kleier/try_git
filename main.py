@@ -300,8 +300,8 @@ def save_ai_summaries(ai_summaries, output_dir="output"):
     print("\n" + ai_summaries['business_insights'])
 
 
-def send_to_motion_webhook(config, summary_stats):
-    """Send summary data to Motion webhook if configured"""
+def send_to_motion_webhook(config, summary_stats, aggregated_data):
+    """Send summary data and detailed conversations to Motion webhook if configured"""
     if not config.get('motion_webhook_url'):
         print("\nSkipping Motion webhook (no URL configured)")
         return
@@ -312,14 +312,18 @@ def send_to_motion_webhook(config, summary_stats):
 
     webhook_sender = MotionWebhookSender(config['motion_webhook_url'])
 
-    # Send the summary
-    success = webhook_sender.send_summary(summary_stats)
+    # Send the summary with detailed conversation data
+    success = webhook_sender.send_summary(summary_stats, aggregated_data)
 
     if success:
         # Also print formatted text for reference
         formatted_text = webhook_sender.format_summary_text(summary_stats)
         print("\n📋 Preview of data sent:")
         print(formatted_text)
+
+        # Show conversation count
+        active_conversations = len([p for p in aggregated_data if p['events'] or p['text_messages']])
+        print(f"\n✅ Sent {active_conversations} detailed conversations to Motion")
     else:
         print("\n⚠️  Motion webhook failed, but data is still saved locally")
 
@@ -347,7 +351,7 @@ def main():
     save_data(aggregated_data, summary_stats)
 
     # Send to Motion webhook
-    send_to_motion_webhook(config, summary_stats)
+    send_to_motion_webhook(config, summary_stats, aggregated_data)
 
     # Generate and save AI summaries
     ai_summaries = generate_ai_summaries(config, aggregated_data, summary_stats)
