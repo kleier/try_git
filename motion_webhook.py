@@ -44,7 +44,8 @@ class MotionWebhookSender:
                 },
                 "generated_at": datetime.utcnow().isoformat() + "Z",
                 "data_source": "FollowUpBoss",
-                "report_type": "conversation_summary"
+                "report_type": "conversation_summary",
+                "time_period": "last_24_hours"
             }
 
             # Send POST request to webhook
@@ -83,13 +84,13 @@ class MotionWebhookSender:
         """
         lines = []
 
-        lines.append("📊 FollowUpBoss Summary Report")
+        lines.append("📊 FollowUpBoss Summary Report - Last 24 Hours")
         lines.append("")
         lines.append("=" * 50)
         lines.append("")
 
         # Main stats
-        lines.append("📈 OVERALL STATISTICS")
+        lines.append("📈 OVERALL STATISTICS (LAST 24 HOURS)")
         lines.append(f"• Total Contacts: {summary_stats.get('total_people', 0)}")
         lines.append(f"• Active Contacts: {summary_stats.get('people_with_interactions', 0)}")
         lines.append(f"• Total Interactions: {summary_stats.get('total_interactions', 0)}")
