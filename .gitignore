@@ -34,3 +34,9 @@ wheels/
 output/
 *.json
 *.csv
+
+# Mojo Dialer Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3

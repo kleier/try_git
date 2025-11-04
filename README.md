@@ -1,9 +1,18 @@
-# FollowUpBoss Conversation Summarizer
+# Big Red Barn Properties - CRM Integration Suite
 
-A Python tool to fetch, aggregate, and analyze all conversations and interactions from your FollowUpBoss account. Uses AI to generate actionable business insights and conversation summaries.
+A comprehensive Python toolkit for real estate CRM data integration, analytics, and AI-powered coaching for ISAs (Inside Sales Agents).
+
+## Tools Included
+
+### 1. FollowUpBoss Conversation Summarizer (`main.py`)
+Fetches, aggregates, and analyzes all conversations from your FollowUpBoss account with AI-powered insights.
+
+### 2. **Mojo Dialer Sync Tool (`mojo_sync.py`)** - NEW!
+Complete Mojo Dialer integration: extract data, store in SQLite, generate analytics, and sync to Follow Up Boss.
 
 ## Features
 
+### FollowUpBoss Tool
 - Fetches all data from FollowUpBoss API:
   - People (contacts/leads)
   - Events (activities, interactions)
@@ -13,6 +22,20 @@ A Python tool to fetch, aggregate, and analyze all conversations and interaction
 - Generates AI-powered insights using Claude
 - Provides both individual conversation summaries and overall business insights
 - Exports data in JSON and human-readable formats
+
+### Mojo Dialer Tool (NEW!)
+- **Data Extraction**: Import contacts and call logs from Mojo CSV exports
+- **SQLite Database**: Centralized storage with complete schema for contacts, calls, and recordings
+- **Analytics & Reports**:
+  - Agent performance metrics (contact rate, avg duration, call results)
+  - Coaching opportunities (sentiment analysis, talk/listen ratio)
+  - CSV exports for external analysis
+  - AI-ready structure for call transcripts and coaching feedback
+- **Follow Up Boss Sync**:
+  - Auto-sync Mojo contacts to FUB as new leads
+  - Sync call logs as activity history
+  - Prevents duplicates with intelligent matching
+- **Future-Ready**: Schema supports call transcripts, sentiment analysis, and AI coaching notes
 
 ## Prerequisites
 
@@ -96,7 +119,7 @@ If you don't provide a webhook URL, the tool will still work and save all data l
 
 ## Usage
 
-### Basic Usage
+### FollowUpBoss Tool
 
 Run the main script:
 
@@ -111,6 +134,38 @@ This will:
 4. Send data to Motion webhook (if configured)
 5. Create AI-powered insights (if Anthropic API key provided)
 6. Save all outputs to the `output/` directory
+
+### Mojo Dialer Tool
+
+**Quick Start:**
+
+```bash
+# 1. Export data from Mojo Dialer (CSV format)
+# 2. Import to local database
+python mojo_sync.py --import-contacts mojo_contacts.csv
+python mojo_sync.py --import-calls mojo_calls.csv
+
+# 3. Generate analytics reports
+python mojo_sync.py --export-analytics
+
+# 4. Sync to Follow Up Boss
+python mojo_sync.py --sync-fub --dry-run  # Preview first
+python mojo_sync.py --sync-fub             # Actually sync
+
+# 5. View statistics
+python mojo_sync.py --stats
+```
+
+**Complete Workflow:**
+```bash
+python mojo_sync.py \
+  --import-contacts contacts.csv \
+  --import-calls calls.csv \
+  --export-analytics \
+  --sync-fub
+```
+
+**📖 For detailed documentation, see [MOJO_SYNC_GUIDE.md](MOJO_SYNC_GUIDE.md)**
 
 ### Output Files
 
@@ -169,12 +224,31 @@ Remove or increase these limits to fetch all available data.
 
 ## Architecture
 
-The project is organized into several modules:
+### FollowUpBoss Tool
 
 - **fub_client.py** - FollowUpBoss API client with authentication and pagination
 - **data_aggregator.py** - Aggregates conversations and calculates metrics
 - **summarizer.py** - AI-powered summarization using Claude
+- **motion_webhook.py** - Motion integration for task creation
 - **main.py** - Main orchestration script
+
+### Mojo Dialer Tool
+
+- **mojo_database.py** - SQLite database manager with full schema
+- **mojo_extractor.py** - CSV parser and data normalizer (future: API client)
+- **mojo_analytics.py** - Analytics engine and CSV exports
+- **mojo_fub_sync.py** - Follow Up Boss sync integration
+- **mojo_sync.py** - Main CLI tool
+- **MOJO_SYNC_GUIDE.md** - Complete documentation and usage guide
+
+### Database Schema
+
+The SQLite database (`mojo_data.db`) includes:
+- **contacts** - All Mojo leads with FUB sync tracking
+- **call_logs** - Complete call history
+- **call_recordings** - Recording metadata, transcripts, AI analysis
+- **analytics_summary** - Pre-computed metrics
+- **import_history** - Audit trail for all imports
 
 ## API Rate Limits
 
